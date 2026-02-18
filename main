@@ -1,0 +1,137 @@
+"""
+from pages.device_management.base_page import DeviceManagementBasePage
+from conftest import ui_step_wait
+from config.logger import get_logger
+import pytest
+
+log = get_logger(__name__)
+
+class DiscoveryWizardPage(DeviceManagementBasePage):
+    # -------------------------------------------------
+    # ELEMENT GETTERS
+    # -------------------------------------------------
+    def _discovery_nav(self):
+        return self.driver.find_element_by_xpath("//nav//a[normalize-space()='Discovery']")
+
+    def _start_discovery_btn(self):
+        return self.driver.find_element_by_xpath("//button[normalize-space()='Start Discovery']")
+
+    def _discovery_type_radio(self, type_value):
+        return self.driver.find_element_by_xpath(f"//input[@type='radio' and @value='{type_value}']")
+
+    def _next_btn(self):
+        return self.driver.find_element_by_xpath("//button[normalize-space()='Next']")
+
+    def _discovery_method_checkbox(self, method_value):
+        return self.driver.find_element_by_xpath(f"//input[@type='checkbox' and contains(@name, 'discoveryMethod') and @value='{method_value}']")
+
+    def _settings_field(self, field_name):
+        return self.driver.find_element_by_xpath(f"//input[@name='{field_name}']")
+
+    def _back_btn(self):
+        return self.driver.find_element_by_xpath("//button[normalize-space()='Back']")
+
+    # -------------------------------------------------
+    # LOW LEVEL ACTIONS
+    # -------------------------------------------------
+    def _click_discovery_nav(self):
+        self._discovery_nav().click()
+        ui_step_wait()
+
+    def _click_start_discovery(self):
+        self._start_discovery_btn().click()
+        ui_step_wait()
+
+    def _select_discovery_type(self, type_value):
+        self._discovery_type_radio(type_value).click()
+        ui_step_wait()
+
+    def _click_next(self):
+        self._next_btn().click()
+        ui_step_wait()
+
+    def _select_discovery_method(self, method_value):
+        self._discovery_method_checkbox(method_value).click()
+        ui_step_wait()
+
+    def _enter_setting(self, field_name, value):
+        field = self._settings_field(field_name)
+        field.clear()
+        field.send_keys(value)
+        ui_step_wait()
+
+    def _click_back(self):
+        self._back_btn().click()
+        ui_step_wait()
+
+    # -------------------------------------------------
+    # HIGH LEVEL FLOWS (PUBLIC API)
+    # -------------------------------------------------
+    def launch_discovery_wizard(self):
+        log.info("Navigating to Discovery Wizard...")
+        self._click_discovery_nav()
+        self._click_start_discovery()
+
+    def select_discovery_type_and_next(self, type_value):
+        log.info(f"Selecting discovery type: {type_value}")
+        self._select_discovery_type(type_value)
+        self._click_next()
+
+    def select_methods_and_next(self, methods):
+        log.info(f"Selecting discovery methods: {methods}")
+        for method in methods:
+            self._select_discovery_method(method)
+        self._click_next()
+
+    def enter_settings(self, settings_dict):
+        log.info(f"Entering settings: {settings_dict}")
+        for field, value in settings_dict.items():
+            self._enter_setting(field, value)
+
+    def back_and_verify(self, type_value, methods, settings_dict):
+        log.info("Clicking back and verifying selections/data...")
+        self._click_back()
+        # Verify discovery type is still selected
+        assert self._discovery_type_radio(type_value).is_selected(), "Discovery type selection not preserved!"
+        # Click next to go to methods screen
+        self._click_next()
+        # Verify methods are still checked
+        for method in methods:
+            assert self._discovery_method_checkbox(method).is_selected(), f"Discovery method {method} not preserved!"
+        self._click_next()
+        # Verify settings are still present
+        for field, value in settings_dict.items():
+            actual = self._settings_field(field).get_attribute('value')
+            assert actual == value, f"Setting '{field}' value not preserved! Expected: {value}, Got: {actual}"
+
+# -------------------------------------------------
+# TEST CASE IMPLEMENTATION
+# -------------------------------------------------
+@pytest.mark.ui
+def test_discovery_wizard_back_next_preserves_selections(driver):
+    """
+    TestID: TC_Discovery_Back_Next_01
+    Verifies that Discovery Wizard preserves selections and data when navigating back and then next.
+    """
+    page = DiscoveryWizardPage(driver)
+    # Test data
+    discovery_type = 'network'  # or 'pc'
+    methods = ['snmp', 'ping']  # Example method values
+    settings = {'ipRange': '192.168.1.1-192.168.1.100', 'snmpCommunity': 'public'}
+
+    # Step 1: Launch Discovery Wizard
+    page.launch_discovery_wizard()
+
+    # Step 2: Select discovery type and proceed
+    page.select_discovery_type_and_next(discovery_type)
+
+    # Step 3: Select discovery methods and proceed
+    page.select_methods_and_next(methods)
+
+    # Step 4: Enter settings for selected methods
+    page.enter_settings(settings)
+
+    # Step 5-8: Back, verify, and proceed forward again
+    page.back_and_verify(discovery_type, methods, settings)
+    log.info("Discovery Wizard back/next data preservation verified.")
+"""

@@ -1,0 +1,227 @@
+from pages.base_page import BasePage
+from conftest import ui_step_wait
+from config.logger import get_logger
+
+log = get_logger(__name__)
+
+class DiscoveryTemplatesPage(BasePage):
+    # -------------------------------------------------
+    # ELEMENT GETTERS
+    # -------------------------------------------------
+    def _discovery_nav(self):
+        return self.driver.find_element_by_xpath("//nav[@id='device-management']//span[text()='Discovery']")
+
+    def _create_template_btn(self):
+        return self.driver.find_element_by_xpath("//button[@id='create-discovery-template']")
+
+    def _run_template_btn(self):
+        return self.driver.find_element_by_xpath("//button[@id='run-discovery-template']")
+
+    def _edit_template_btn(self):
+        return self.driver.find_element_by_xpath("//button[@id='edit-template']")
+
+    def _network_connected_radio(self):
+        return self.driver.find_element_by_xpath("//input[@id='network-connected-devices']")
+
+    def _pc_connected_radio(self):
+        return self.driver.find_element_by_xpath("//input[@id='pc-connected-devices']")
+
+    def _discovery_method_checkbox(self, method_name):
+        return self.driver.find_element_by_xpath(f"//label[contains(text(), '{method_name}')]/preceding-sibling::input[@type='checkbox']")
+
+    def _next_btn(self):
+        return self.driver.find_element_by_xpath("//button[text()='Next']")
+
+    def _do_not_use_credentials_radio(self):
+        return self.driver.find_element_by_xpath("//input[@id='no-credentials']")
+
+    def _specify_credentials_radio(self):
+        return self.driver.find_element_by_xpath("//input[@id='specify-credentials']")
+
+    def _snmpv1_input(self):
+        return self.driver.find_element_by_xpath("//input[@id='snmpv1']")
+
+    def _snmpv3_input(self):
+        return self.driver.find_element_by_xpath("//input[@id='snmpv3']")
+
+    def _ad_input(self):
+        return self.driver.find_element_by_xpath("//input[@id='active-directory']")
+
+    def _global_credentials_input(self):
+        return self.driver.find_element_by_xpath("//input[@id='global-credentials']")
+
+    def _template_name_input(self):
+        return self.driver.find_element_by_xpath("//input[@id='template-name']")
+
+    def _create_template_submit_btn(self):
+        return self.driver.find_element_by_xpath("//button[text()='Create Template']")
+
+    def _done_btn(self):
+        return self.driver.find_element_by_xpath("//button[text()='Done']")
+
+    def _use_template_dropdown(self):
+        return self.driver.find_element_by_xpath("//select[@id='use-template']")
+
+    def _schedule_discovery_checkbox(self):
+        return self.driver.find_element_by_xpath("//input[@id='schedule-discovery']")
+
+    def _start_btn(self):
+        return self.driver.find_element_by_xpath("//button[text()='Start']")
+
+    def _progress_page(self):
+        return self.driver.find_element_by_xpath("//div[@id='progress-page']")
+
+    # -------------------------------------------------
+    # LOW LEVEL ACTIONS
+    # -------------------------------------------------
+    def _right_click_discovery(self):
+        ui_step_wait()
+        self._discovery_nav().context_click()
+
+    def _select_create_template(self):
+        ui_step_wait()
+        self._create_template_btn().click()
+
+    def _select_run_template(self):
+        ui_step_wait()
+        self._run_template_btn().click()
+
+    def _select_edit_template(self):
+        ui_step_wait()
+        self._edit_template_btn().click()
+
+    def _choose_discovery_option(self, option):
+        ui_step_wait()
+        if option == 'Network connected devices':
+            self._network_connected_radio().click()
+        else:
+            self._pc_connected_radio().click()
+
+    def _select_discovery_methods(self, methods):
+        ui_step_wait()
+        for method in methods:
+            self._discovery_method_checkbox(method).click()
+
+    def _click_next(self):
+        ui_step_wait()
+        self._next_btn().click()
+
+    def _specify_credentials(self, creds):
+        ui_step_wait()
+        if creds['type'] == 'none':
+            self._do_not_use_credentials_radio().click()
+        else:
+            self._specify_credentials_radio().click()
+            if 'snmpv1' in creds:
+                self._snmpv1_input().send_keys(creds['snmpv1'])
+            if 'snmpv3' in creds:
+                self._snmpv3_input().send_keys(creds['snmpv3'])
+            if 'ad' in creds:
+                self._ad_input().send_keys(creds['ad'])
+            if 'global' in creds:
+                self._global_credentials_input().send_keys(creds['global'])
+
+    def _enter_template_name(self, name):
+        ui_step_wait()
+        self._template_name_input().send_keys(name)
+
+    def _submit_create_template(self):
+        ui_step_wait()
+        self._create_template_submit_btn().click()
+
+    def _select_template_from_dropdown(self, template_name):
+        ui_step_wait()
+        dropdown = self._use_template_dropdown()
+        for option in dropdown.find_elements_by_tag_name('option'):
+            if option.text == template_name:
+                option.click()
+                break
+
+    def _schedule_discovery(self, schedule):
+        ui_step_wait()
+        if schedule['enabled']:
+            self._schedule_discovery_checkbox().click()
+            # Add schedule options here as needed
+
+    def _start_discovery(self):
+        ui_step_wait()
+        self._start_btn().click()
+
+    def _monitor_progress(self):
+        ui_step_wait()
+        return self._progress_page().text
+
+    def _done(self):
+        ui_step_wait()
+        self._done_btn().click()
+
+    # -------------------------------------------------
+    # HIGH LEVEL FLOWS (PUBLIC API)
+    # -------------------------------------------------
+    def create_discovery_template(self, option, methods, settings, creds, template_name):
+        log.info('Starting template creation wizard')
+        self._right_click_discovery()
+        self._select_create_template()
+        self._choose_discovery_option(option)
+        self._select_discovery_methods(methods)
+        self._click_next()
+        # settings is a dict, handle settings for each method
+        for method, method_settings in settings.items():
+            # Fill method-specific settings here
+            # Example: self._fill_method_settings(method, method_settings)
+            self._click_next()
+        self._specify_credentials(creds)
+        self._click_next()
+        self._enter_template_name(template_name)
+        self._click_next()
+        self._submit_create_template()
+        self._done()
+
+    def run_discovery_template(self, template_name, schedule):
+        log.info('Starting template execution wizard')
+        self._right_click_discovery()
+        self._select_run_template()
+        self._select_template_from_dropdown(template_name)
+        self._click_next()
+        self._schedule_discovery(schedule)
+        self._click_next()
+        self._start_discovery()
+        progress = self._monitor_progress()
+        self._done()
+        return progress
+
+    def edit_discovery_template(self, template_name, new_details):
+        log.info('Editing template')
+        self._select_edit_template()
+        # Fill in edit steps as per new_details
+        # Example: self._enter_template_name(new_details['name'])
+        self._click_next()
+        # Repeat for each step as needed
+        self._submit_create_template()
+        self._done()
+
+# Example pytest test function
+import pytest
+
+@pytest.mark.discovery_templates
+def test_discovery_template_wizards(driver):
+    page = DiscoveryTemplatesPage(driver)
+    # Template creation
+    page.create_discovery_template(
+        option='Network connected devices',
+        methods=['Ping', 'SNMP'],
+        settings={'Ping': {'timeout': 5}, 'SNMP': {'community': 'public'}},
+        creds={'type': 'none'},
+        template_name='AutoTemplate1'
+    )
+    # Template execution
+    progress = page.run_discovery_template(
+        template_name='AutoTemplate1',
+        schedule={'enabled': False}
+    )
+    assert 'Completed' in progress
+    # Template edit
+    page.edit_discovery_template(
+        template_name='AutoTemplate1',
+        new_details={'name': 'AutoTemplate1-Edited'}
+    )
